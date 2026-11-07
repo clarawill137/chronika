@@ -1,0 +1,5 @@
+#chronika_settings .hr-row { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+#chronika_settings .hr-row label { font-size: 0.9em; opacity: 0.85; }
+#chronika_settings .hr-warn { color: var(--warning, #e0a800); font-size: 0.85em; margin: 6px 0; }
+#chronika_settings .hr-hint { font-size: 0.8em; opacity: 0.7; }
+.hr-popup { text-align: left; white-space: pre-wrap; font-size: 0.85em; line-height: 1.45; max-height: 70vh; overflow-y: auto; }
