@@ -119,13 +119,18 @@ function timeline() {
     try { return window.SacredTimeline?.context?.() || null; } catch { return null; }
 }
 
-/** Откуда брать память: в чате эпохи — её меморибук и Хроника мира; иначе — лорбуки из настроек. */
+/**
+ * Откуда брать память: в чате эпохи — её меморибук, память прошлых эпох (история) и Хроника мира;
+ * иначе — лорбуки из настроек.
+ */
 function memorySources() {
     const cx = timeline();
     if (cx?.explicit) {
         const names = [];
-        if (cx.era?.memoryBook) names.push(cx.era.memoryBook);
-        if (cx.world?.chronicle && !names.includes(cx.world.chronicle)) names.push(cx.world.chronicle);
+        const add = (n) => { if (n && !names.includes(n)) names.push(n); };
+        add(cx.era?.memoryBook);
+        for (const n of cx.era?.history || []) add(n);
+        add(cx.world?.chronicle);
         return { cx, names };
     }
     return { cx: null, names: settings().lorebooks.split(',').map(s => s.trim()).filter(Boolean) };
@@ -173,6 +178,7 @@ async function memoryCorpus() {
             try { list = await window.SacredTimeline.visible(list, name); } catch (e) { console.warn('[Хроника] фильтр эпохи', e); list = []; }
         }
         const chronicle = !!cx && name === cx.world?.chronicle;
+        const past = !!cx && (cx.era?.history || []).includes(name);
         for (const e of list) {
             const text = cleanText(e.content);
             if (!text) continue;
@@ -180,7 +186,7 @@ async function memoryCorpus() {
             const range = (e.STMB_start !== undefined && e.STMB_end !== undefined)
                 ? `сообщения #${e.STMB_start}–#${e.STMB_end}` : '';
             out.push({
-                book: name, chronicle, title: e.comment || '(без названия)', range,
+                book: name, chronicle, past, title: e.comment || '(без названия)', range,
                 text, ntext: norm(`${e.comment || ''}\n${keys}\n${text}`), nbody: norm(text),
             });
         }
@@ -232,7 +238,8 @@ async function doSearch(args = {}) {
             for (const h of memHits.slice(0, 5)) {
                 const term = h.matched.find(t => h.e.nbody.includes(t)) || h.matched[0];
                 const sn = snippet(h.e.text, h.e.nbody, term, 350) || h.e.text.slice(0, 500) + '…';
-                lines.push(`• ${h.e.chronicle ? '[Хроника мира] ' : ''}«${h.e.title}»${h.e.range ? ` [${h.e.range}]` : ''}\n  ${sn}`);
+                const tag = h.e.chronicle ? '[Хроника мира] ' : h.e.past ? `[прошлое: ${h.e.book}] ` : '';
+                lines.push(`• ${tag}«${h.e.title}»${h.e.range && !h.e.past ? ` [${h.e.range}]` : ''}\n  ${sn}`);
             }
         }
     }
@@ -481,8 +488,10 @@ function renderEra() {
     }
     const mem = cx.era?.memoryBook;
     const when = cx.date ? ` на ${cx.date}` : '';
+    const past = (cx.era?.history || []).length;
     el.textContent = `Эпоха ${cx.era.id}: память — ${mem ? `«${mem}»` : 'меморибука у эпохи нет'}`
-        + `${cx.world?.chronicle ? `, плюс Хроника мира — только то, что видно${when}` : ''}. Будущего поиск отсюда не видит.`
+        + (past ? `, память прошлых эпох (${past})` : '')
+        + `${cx.world?.chronicle ? `, Хроника мира` : ''} — только то, что видно${when} тому, кто говорит. Будущего поиск отсюда не видит.`
         + (names.length ? '' : ' Искать в памяти пока негде — только в сообщениях чата.');
 }
 
